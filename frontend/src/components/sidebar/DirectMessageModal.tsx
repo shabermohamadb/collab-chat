@@ -34,7 +34,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
     setLoading(true);
     try {
       const results = await authService.searchUsers(query);
-      setUsers(results);
+      setUsers(results.map((u: any) => ({ ...u, avatarUrl: u.avatarUrl || u.avatar || null })));
     } catch (err) {
       console.error('Failed to search users:', err);
     } finally {

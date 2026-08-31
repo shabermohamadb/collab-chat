@@ -10,9 +10,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (credentials: { identifier: string; password: string }) => Promise<void>;
   register: (data: { email: string; password: string; confirmPassword?: string; name?: string; username?: string; avatarUrl?: string }) => Promise<void>;
-  startGoogleOAuth: () => void;
-  startGitHubOAuth: () => void;
-  disconnectProvider: (provider: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: Partial<UserProfile>) => void;
   updateStatus: (status: 'ONLINE' | 'AWAY' | 'OFFLINE') => Promise<void>;
@@ -34,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           socketService.connect();
         } catch (sockErr) {
-          console.warn('[AUTH FRONTEND] Socket connect notice (non-fatal):', sockErr);
+          console.warn('[AUTH FRONTEND] Socket connect notice:', sockErr);
         }
       } else {
         console.log('[AUTH FRONTEND] No active session found.');
@@ -51,32 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    // 1. Check if returning from Google / OAuth callback with token
-    const params = new URLSearchParams(window.location.search);
-    const callbackToken = params.get('token');
-    const authSuccess = params.get('auth_success') || params.get('login_success');
-
-    if (callbackToken) {
-      console.log('[AUTH FRONTEND] Capturing OAuth session token from URL');
-      setAuthToken(callbackToken);
-    }
-
-    if (callbackToken || authSuccess) {
-      // Clean query params from browser URL bar without page reload
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    // 2. Fetch authenticated user session
     refreshMe();
-
-    const handleUnauthorized = () => {
-      console.log('[AUTH FRONTEND] Unauthorized event received. Clearing user state.');
-      setUser(null);
-      socketService.disconnect();
-    };
-
-    window.addEventListener('auth:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, [refreshMe]);
 
   const login = async (credentials: { identifier: string; password: string }) => {
@@ -84,56 +56,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await authService.login(credentials);
       if (res.user) {
+        if (res.sessionToken) {
+          setAuthToken(res.sessionToken);
+        }
         setUser(res.user);
         try {
           socketService.connect();
-        } catch (sockErr) {
-          console.warn('Socket connect notice:', sockErr);
+        } catch (err) {
+          console.warn('Socket connect notice:', err);
         }
       } else {
-        await refreshMe();
+        throw new Error(res.message || 'Login failed.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (data: { email: string; password: string; confirmPassword?: string; name?: string; username?: string; avatarUrl?: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    confirmPassword?: string;
+    name?: string;
+    username?: string;
+    avatarUrl?: string;
+  }) => {
     setLoading(true);
     try {
       const res = await authService.register(data);
       if (res.user) {
+        if (res.sessionToken) {
+          setAuthToken(res.sessionToken);
+        }
         setUser(res.user);
         try {
           socketService.connect();
-        } catch (sockErr) {
-          console.warn('Socket connect notice:', sockErr);
+        } catch (err) {
+          console.warn('Socket connect notice:', err);
         }
       } else {
-        await refreshMe();
+        throw new Error(res.message || 'Registration failed.');
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  const startGoogleOAuth = () => {
-    authService.startGoogleOAuth();
-  };
-
-  const startGitHubOAuth = () => {
-    authService.startGitHubOAuth();
-  };
-
-  const disconnectProvider = async (provider: string) => {
-    await authService.disconnectProvider(provider);
-    await refreshMe();
   };
 
   const logout = async () => {
     setLoading(true);
     try {
       await authService.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
     } finally {
       setUser(null);
       socketService.disconnect();
@@ -141,19 +115,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateUser = (updatedUser: Partial<UserProfile>) => {
-    if (!user) return;
-    setUser({ ...user, ...updatedUser });
+  const updateUser = (updated: Partial<UserProfile>) => {
+    if (user) {
+      setUser({ ...user, ...updated });
+    }
   };
 
   const updateStatus = async (status: 'ONLINE' | 'AWAY' | 'OFFLINE') => {
-    if (!user) return;
-    try {
-      const updated = await authService.updateProfile({ status });
-      setUser((prev) => (prev ? { ...prev, ...updated } : null));
+    if (user) {
+      setUser({ ...user, status });
       socketService.emitPresenceChange(status);
-    } catch (err) {
-      console.error('Failed to update status:', err);
     }
   };
 
@@ -165,9 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         login,
         register,
-        startGoogleOAuth,
-        startGitHubOAuth,
-        disconnectProvider,
         logout,
         updateUser,
         updateStatus,

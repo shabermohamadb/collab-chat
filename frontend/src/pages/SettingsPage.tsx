@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
 import {
   User,
   Mail,
   Calendar,
   Shield,
-  CheckCircle2,
-  AlertTriangle,
   X,
-  ExternalLink,
   Lock,
 } from 'lucide-react';
 
@@ -17,30 +14,9 @@ interface SettingsPageProps {
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
-  const { user, startGoogleOAuth, startGitHubOAuth, disconnectProvider, logout } = useAuth();
-  const [disconnecting, setDisconnecting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { user, logout } = useAuth();
 
   if (!user) return null;
-
-  const connectedAccounts = user.connectedAccounts || [];
-  const isGoogleConnected = connectedAccounts.includes('google');
-  const isGitHubConnected = connectedAccounts.includes('github');
-
-  const handleDisconnect = async (provider: string) => {
-    setError(null);
-    setSuccessMsg(null);
-    setDisconnecting(provider);
-    try {
-      await disconnectProvider(provider);
-      setSuccessMsg(`Successfully disconnected ${provider.toUpperCase()}.`);
-    } catch (err: any) {
-      setError(err.message || `Failed to disconnect ${provider}.`);
-    } finally {
-      setDisconnecting(null);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -53,7 +29,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
             </div>
             <div>
               <h2 className="text-base font-semibold text-zinc-100">Account Settings</h2>
-              <p className="text-xs text-zinc-400">Manage your profile & connected accounts</p>
+              <p className="text-xs text-zinc-400">Manage your profile & session</p>
             </div>
           </div>
           <button
@@ -66,20 +42,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
-          {error && (
-            <div className="p-3 rounded-xl bg-red-950/60 border border-red-800/60 text-red-300 text-xs flex items-center gap-2">
-              <AlertTriangle size={16} className="shrink-0 text-red-400" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-xs flex items-center gap-2">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
           {/* Section 1: Profile Details */}
           <div>
             <h3 className="text-xs font-semibold uppercase text-zinc-400 tracking-wider mb-3">
@@ -100,131 +62,43 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Section 2: Connected Accounts */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold uppercase text-zinc-400 tracking-wider">
-                Connected Accounts
-              </h3>
-              <span className="text-[11px] text-zinc-500">OAuth 2.0 Providers</span>
-            </div>
-
-            <div className="space-y-3">
-              {/* Google */}
-              <div className="p-3.5 rounded-xl bg-[#0c0917] border border-[#261f3e] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#1a1430] border border-[#30274f] flex items-center justify-center">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#EA4335"
-                        d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 8.9 5 12 5z"
-                      />
-                      <path
-                        fill="#4285F4"
-                        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1c0 2.8.7 5.4 1.9 7.8l3.7-2.9z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.5-2.3-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-zinc-200">Google</div>
-                    <div className="text-[11px] text-zinc-400">
-                      {isGoogleConnected ? (
-                        <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                          <CheckCircle2 size={11} /> Connected
-                        </span>
-                      ) : (
-                        'Not connected'
-                      )}
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="p-3 rounded-xl bg-[#0c0917] border border-[#261f3e]">
+                <div className="text-[11px] text-zinc-400 flex items-center gap-1 mb-1">
+                  <Shield size={12} className="text-[#9b89f5]" />
+                  <span>Account Type</span>
                 </div>
-
-                {isGoogleConnected ? (
-                  <button
-                    type="button"
-                    disabled={disconnecting === 'google'}
-                    onClick={() => handleDisconnect('google')}
-                    className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/40 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {disconnecting === 'google' ? 'Disconnecting...' : 'Disconnect'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startGoogleOAuth}
-                    className="px-3 py-1.5 text-xs font-medium text-white bg-[#7b68ee] hover:bg-[#6a56d6] rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <span>Connect</span>
-                    <ExternalLink size={12} />
-                  </button>
-                )}
+                <div className="text-xs font-semibold text-zinc-200">
+                  {user.isAi ? 'AI System Participant' : 'Standard Workspace Member'}
+                </div>
               </div>
 
-              {/* GitHub */}
-              <div className="p-3.5 rounded-xl bg-[#0c0917] border border-[#261f3e] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#1a1430] border border-[#30274f] flex items-center justify-center">
-                    <svg className="w-5 h-5 fill-current text-white" viewBox="0 0 24 24">
-                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-zinc-200">GitHub</div>
-                    <div className="text-[11px] text-zinc-400">
-                      {isGitHubConnected ? (
-                        <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                          <CheckCircle2 size={11} /> Connected
-                        </span>
-                      ) : (
-                        'Not connected'
-                      )}
-                    </div>
-                  </div>
+              <div className="p-3 rounded-xl bg-[#0c0917] border border-[#261f3e]">
+                <div className="text-[11px] text-zinc-400 flex items-center gap-1 mb-1">
+                  <Calendar size={12} className="text-[#9b89f5]" />
+                  <span>Joined Date</span>
                 </div>
-
-                {isGitHubConnected ? (
-                  <button
-                    type="button"
-                    disabled={disconnecting === 'github'}
-                    onClick={() => handleDisconnect('github')}
-                    className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/40 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {disconnecting === 'github' ? 'Disconnecting...' : 'Disconnect'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startGitHubOAuth}
-                    className="px-3 py-1.5 text-xs font-medium text-white bg-[#7b68ee] hover:bg-[#6a56d6] rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <span>Connect</span>
-                    <ExternalLink size={12} />
-                  </button>
-                )}
+                <div className="text-xs font-semibold text-zinc-200">
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 3: Session Management */}
+          {/* Section 2: Session Security */}
           <div>
             <h3 className="text-xs font-semibold uppercase text-zinc-400 tracking-wider mb-2">
-              Authentication Security
+              Authentication & Security
             </h3>
             <div className="p-3.5 rounded-xl bg-[#0c0917] border border-[#261f3e] flex items-center justify-between">
               <div>
-                <div className="text-xs font-medium text-zinc-200">Active Session</div>
-                <div className="text-[11px] text-zinc-400">
-                  Secured with HttpOnly cookie & PostgreSQL session store
+                <div className="text-xs font-medium text-zinc-200 flex items-center gap-1.5">
+                  <Lock size={12} className="text-emerald-400" />
+                  <span>Active Session</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">
+                  Protected with encrypted session token & JSON database
                 </div>
               </div>
               <button
