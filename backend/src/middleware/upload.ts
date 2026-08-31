@@ -4,7 +4,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { getConfig } from '../utils/config.js';
 
-const uploadDir = path.resolve(__dirname, '../../uploads');
+const uploadDir = path.resolve(process.cwd(), 'uploads');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

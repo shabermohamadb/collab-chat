@@ -36,8 +36,11 @@ export const getConfig = (): AppConfig => {
   if (loadedConfig) return loadedConfig;
 
   try {
-    const configPath = path.resolve(__dirname, '../../../config/config.json');
-    if (fs.existsSync(configPath)) {
+    const primaryPath = path.resolve(process.cwd(), 'config/config.json');
+    const altPath = path.resolve(process.cwd(), '../config/config.json');
+    const configPath = fs.existsSync(primaryPath) ? primaryPath : (fs.existsSync(altPath) ? altPath : null);
+
+    if (configPath) {
       const raw = fs.readFileSync(configPath, 'utf-8');
       loadedConfig = JSON.parse(raw);
       return loadedConfig!;
@@ -68,11 +71,13 @@ export const getConfig = (): AppConfig => {
       directMessages: true,
     },
     ai: {
-      model: 'gpt-4o-mini',
-      botName: 'AI Assistant',
-      botUsername: 'AI',
-      contextMessageLimit: 20,
-      systemPrompt: 'You are AI, a helpful participant in a multi-user collaborative chat workspace.',
+      model: 'gemini-1.5-flash',
+      botName: 'Gemini Assistant',
+      botUsername: 'ai',
+      contextMessageLimit: 10,
+      systemPrompt: 'You are an intelligent, helpful AI collaboration partner in a team chat channel. Format your responses with beautiful Markdown.',
     },
   };
 };
+
+export default getConfig;
