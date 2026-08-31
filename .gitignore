@@ -29,3 +29,9 @@ yarn-error.log*
 *.ntvs*
 *.njsproj
 *.sln
+
+# Local JSON Database files
+backend/data/*.json
+data/*.json
+backend/data/*.tmp*
+data/*.tmp*

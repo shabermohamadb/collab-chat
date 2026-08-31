@@ -19,9 +19,8 @@ export const generateOAuthState = (): string => {
 
 // =================== GOOGLE OAUTH 2.0 ===================
 
-export const getGoogleAuthUrl = (state: string): string => {
+export const getGoogleAuthUrl = (state: string, redirectUri: string): string => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
 
   if (!clientId || clientId.includes('example.apps.googleusercontent.com') || clientId.includes('your_google_client_id')) {
     throw new Error('Google OAuth credentials not configured. Please paste your GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET in .env.');
@@ -40,10 +39,9 @@ export const getGoogleAuthUrl = (state: string): string => {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 };
 
-export const handleGoogleCallback = async (code: string): Promise<OAuthProfile> => {
+export const handleGoogleCallback = async (code: string, redirectUri: string): Promise<OAuthProfile> => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
 
   if (!clientId || !clientSecret || clientId.includes('example.apps.googleusercontent.com')) {
     throw new Error('Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) are missing or invalid.');
@@ -101,9 +99,8 @@ export const handleGoogleCallback = async (code: string): Promise<OAuthProfile> 
 
 // =================== GITHUB OAUTH ===================
 
-export const getGitHubAuthUrl = (state: string): string => {
+export const getGitHubAuthUrl = (state: string, redirectUri: string): string => {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = process.env.GITHUB_CALLBACK_URL || 'http://localhost:5000/api/auth/github/callback';
 
   if (!clientId || clientId.includes('your_github_oauth_client_id')) {
     throw new Error('GitHub OAuth credentials not configured. Please paste your GITHUB_CLIENT_ID & GITHUB_CLIENT_SECRET in .env.');
@@ -119,10 +116,9 @@ export const getGitHubAuthUrl = (state: string): string => {
   return `https://github.com/login/oauth/authorize?${params.toString()}`;
 };
 
-export const handleGitHubCallback = async (code: string): Promise<OAuthProfile> => {
+export const handleGitHubCallback = async (code: string, redirectUri: string): Promise<OAuthProfile> => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-  const redirectUri = process.env.GITHUB_CALLBACK_URL || 'http://localhost:5000/api/auth/github/callback';
 
   if (!clientId || !clientSecret || clientId.includes('your_github_oauth_client_id')) {
     throw new Error('GitHub OAuth credentials (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) are missing or invalid.');
