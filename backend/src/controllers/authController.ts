@@ -22,13 +22,14 @@ const loginSchema = z.object({
 });
 
 export const getBaseUrl = (req: AuthenticatedRequest): string => {
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
   if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
     return process.env.FRONTEND_URL.replace(/\/$/, '');
   }
 
   const host = req.get('x-forwarded-host') || req.get('host');
-  const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+  const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : (req.protocol || 'http'));
 
   if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
     return `${proto}://${host}`;
@@ -45,8 +46,15 @@ export const getCallbackUrl = (req: AuthenticatedRequest, provider: string): str
     return process.env.GITHUB_CALLBACK_URL;
   }
 
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/api/auth/${provider}/callback`;
+  }
+  if (process.env.APP_URL) {
+    return `${process.env.APP_URL.replace(/\/$/, '')}/api/auth/${provider}/callback`;
+  }
+
   const host = req.get('x-forwarded-host') || req.get('host');
-  const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+  const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : (req.protocol || 'http'));
 
   if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
     return `${proto}://${host}/api/auth/${provider}/callback`;
