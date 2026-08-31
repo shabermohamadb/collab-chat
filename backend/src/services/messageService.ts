@@ -16,7 +16,7 @@ export const createMessage = async (
   const content = data.content.trim();
 
   if (!content && (!data.attachmentIds || data.attachmentIds.length === 0)) {
-    throw new Error('Message content or attachment is required.');
+    throw new Error('Message cannot be empty.');
   }
 
   if (content.length > config.maxMessageLength) {
@@ -66,6 +66,7 @@ export const createMessage = async (
               id: true,
               username: true,
               name: true,
+              avatar: true,
             },
           },
         },
@@ -84,17 +85,20 @@ export const createMessage = async (
           avatarUrl: rawMessage.sender.avatar,
         }
       : null,
-    reactions: rawMessage.reactions.map((r) => ({
+    reactions: rawMessage.reactions ? rawMessage.reactions.map((r: any) => ({
       ...r,
-      user: r.user ? { ...r.user, displayName: r.user.name || r.user.username } : undefined,
-    })),
+      user: r.user
+        ? {
+            ...r.user,
+            displayName: r.user.name || r.user.username,
+            avatarUrl: r.user.avatar,
+          }
+        : null,
+    })) : [],
+    attachments: rawMessage.attachments || [],
   };
 
-  await prisma.room.update({
-    where: { id: data.roomId },
-    data: { updatedAt: new Date() },
-  });
-
+  // If it's a reply in a thread, update or create the thread record
   if (data.parentMessageId) {
     await prisma.thread.upsert({
       where: { rootMessageId: data.parentMessageId },
@@ -118,10 +122,21 @@ export const createMessage = async (
 
   broadcastToRoom(data.roomId, 'message:new', message);
 
-  if (/@AI\b/i.test(content)) {
+  // Trigger AI Assistant if mentioned or inside AI channel
+  const room = await prisma.room.findUnique({
+    where: { id: data.roomId },
+    select: { id: true, name: true },
+  });
+
+  const isAiTrigger =
+    /@(ai|gemini|bot|assistant)\b/i.test(content) ||
+    /^\s*(\/ai|ai\b)/i.test(content) ||
+    (room?.name && /ai|prompt|lab/i.test(room.name));
+
+  if (isAiTrigger) {
     setTimeout(() => {
       handleAiMention(data.roomId, content, userId, data.parentMessageId);
-    }, 100);
+    }, 150);
   }
 
   return message;
@@ -138,18 +153,28 @@ export const getRoomMessages = async (
   const config = getConfig();
   const limit = Math.min(options.limit || config.pagination.defaultMessagesPerPage, config.pagination.maxMessagesPerPage);
 
-  const messages = await prisma.message.findMany({
-    where: {
-      roomId,
-      isDeleted: false,
-      parentMessageId: options.parentMessageId || null,
-    },
-    orderBy: { createdAt: 'desc' },
+  const whereClause: any = {
+    roomId,
+    isDeleted: false,
+  };
+
+  if (options.parentMessageId !== undefined) {
+    whereClause.parentMessageId = options.parentMessageId;
+  }
+
+  let cursorObj = undefined;
+  if (options.cursor) {
+    cursorObj = { id: options.cursor };
+  }
+
+  const rawMessages = await prisma.message.findMany({
+    where: whereClause,
     take: limit + 1,
-    ...(options.cursor && {
-      skip: 1,
-      cursor: { id: options.cursor },
-    }),
+    skip: options.cursor ? 1 : 0,
+    cursor: cursorObj,
+    orderBy: {
+      createdAt: 'desc',
+    },
     include: {
       sender: {
         select: {
@@ -168,25 +193,21 @@ export const getRoomMessages = async (
               id: true,
               username: true,
               name: true,
+              avatar: true,
             },
           },
         },
       },
       attachments: true,
       threadInfo: true,
-      _count: {
-        select: {
-          replies: true,
-        },
-      },
     },
   });
 
-  const hasMore = messages.length > limit;
-  const returnedMessages = hasMore ? messages.slice(0, limit) : messages;
+  const hasMore = rawMessages.length > limit;
+  const returnedMessages = hasMore ? rawMessages.slice(0, limit) : rawMessages;
   const nextCursor = hasMore ? returnedMessages[returnedMessages.length - 1].id : null;
 
-  const formatted = returnedMessages.reverse().map((m) => ({
+  const formatted = returnedMessages.reverse().map((m: any) => ({
     ...m,
     sender: m.sender
       ? {
@@ -195,11 +216,17 @@ export const getRoomMessages = async (
           avatarUrl: m.sender.avatar,
         }
       : null,
-    reactions: m.reactions.map((r) => ({
+    reactions: m.reactions ? m.reactions.map((r: any) => ({
       ...r,
-      user: r.user ? { ...r.user, displayName: r.user.name || r.user.username } : undefined,
-    })),
-    replyCount: m._count?.replies || m.threadInfo?.replyCount || 0,
+      user: r.user
+        ? {
+            ...r.user,
+            displayName: r.user.name || r.user.username,
+            avatarUrl: r.user.avatar,
+          }
+        : null,
+    })) : [],
+    attachments: m.attachments || [],
   }));
 
   return {
@@ -209,21 +236,33 @@ export const getRoomMessages = async (
   };
 };
 
-export const editMessage = async (messageId: string, userId: string, content: string) => {
+export const editMessage = async (userId: string, messageId: string, content: string) => {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    throw new Error('Message content cannot be empty.');
+  }
+
   const message = await prisma.message.findUnique({
     where: { id: messageId },
   });
 
-  if (!message) throw new Error('Message not found.');
-  if (message.senderId !== userId) throw new Error('You can only edit your own messages.');
-  if (message.isDeleted) throw new Error('Cannot edit a deleted message.');
+  if (!message) {
+    throw new Error('Message not found.');
+  }
+
+  if (message.senderId !== userId) {
+    throw new Error('You do not have permission to edit this message.');
+  }
+
+  if (message.isDeleted) {
+    throw new Error('Cannot edit a deleted message.');
+  }
 
   const updatedRaw = await prisma.message.update({
     where: { id: messageId },
     data: {
-      content: content.trim(),
+      content: trimmed,
       isEdited: true,
-      editedAt: new Date(),
     },
     include: {
       sender: {
@@ -243,6 +282,7 @@ export const editMessage = async (messageId: string, userId: string, content: st
               id: true,
               username: true,
               name: true,
+              avatar: true,
             },
           },
         },
@@ -252,7 +292,7 @@ export const editMessage = async (messageId: string, userId: string, content: st
     },
   });
 
-  const updated = {
+  const formatted = {
     ...updatedRaw,
     sender: updatedRaw.sender
       ? {
@@ -261,63 +301,72 @@ export const editMessage = async (messageId: string, userId: string, content: st
           avatarUrl: updatedRaw.sender.avatar,
         }
       : null,
-    reactions: updatedRaw.reactions.map((r) => ({
+    reactions: updatedRaw.reactions ? updatedRaw.reactions.map((r: any) => ({
       ...r,
-      user: r.user ? { ...r.user, displayName: r.user.name || r.user.username } : undefined,
-    })),
+      user: r.user
+        ? {
+            ...r.user,
+            displayName: r.user.name || r.user.username,
+            avatarUrl: r.user.avatar,
+          }
+        : null,
+    })) : [],
+    attachments: updatedRaw.attachments || [],
   };
 
-  broadcastToRoom(updated.roomId, 'message:edited', updated);
-  return updated;
+  broadcastToRoom(message.roomId, 'message:edit', formatted);
+
+  return formatted;
 };
 
-export const deleteMessage = async (messageId: string, userId: string) => {
+export const deleteMessage = async (userId: string, messageId: string) => {
   const message = await prisma.message.findUnique({
     where: { id: messageId },
-    include: {
-      room: {
-        include: {
-          members: {
-            where: { userId },
-          },
-        },
-      },
-    },
   });
 
-  if (!message) throw new Error('Message not found.');
-
-  const userMembership = message.room.members[0];
-  const isSender = message.senderId === userId;
-  const isAdminOrOwner = userMembership && (userMembership.role === 'OWNER' || userMembership.role === 'ADMIN');
-
-  if (!isSender && !isAdminOrOwner) {
-    throw new Error('You do not have permission to delete this message.');
+  if (!message) {
+    throw new Error('Message not found.');
   }
 
-  await prisma.message.update({
+  if (message.senderId !== userId) {
+    const membership = await prisma.roomMember.findUnique({
+      where: {
+        roomId_userId: {
+          roomId: message.roomId,
+          userId,
+        },
+      },
+    });
+
+    if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+      throw new Error('You do not have permission to delete this message.');
+    }
+  }
+
+  const updated = await prisma.message.update({
     where: { id: messageId },
     data: {
       isDeleted: true,
-      content: 'This message has been deleted.',
+      content: 'This message was deleted.',
     },
   });
 
-  broadcastToRoom(message.roomId, 'message:deleted', {
+  broadcastToRoom(message.roomId, 'message:delete', {
     messageId,
     roomId: message.roomId,
-    parentMessageId: message.parentMessageId,
   });
 
-  return { success: true };
+  return updated;
 };
 
-export const toggleReaction = async (messageId: string, userId: string, emoji: string) => {
+export const toggleReaction = async (userId: string, messageId: string, emoji: string) => {
   const message = await prisma.message.findUnique({
     where: { id: messageId },
   });
 
-  if (!message) throw new Error('Message not found.');
+  if (!message) {
+    throw new Error('Message not found.');
+  }
 
   const existing = await prisma.messageReaction.findUnique({
     where: {
@@ -351,17 +400,24 @@ export const toggleReaction = async (messageId: string, userId: string, emoji: s
           id: true,
           username: true,
           name: true,
+          avatar: true,
         },
       },
     },
   });
 
-  const updatedReactions = updatedReactionsRaw.map((r) => ({
+  const updatedReactions = updatedReactionsRaw.map((r: any) => ({
     ...r,
-    user: r.user ? { ...r.user, displayName: r.user.name || r.user.username } : undefined,
+    user: r.user
+      ? {
+          ...r.user,
+          displayName: r.user.name || r.user.username,
+          avatarUrl: r.user.avatar,
+        }
+      : null,
   }));
 
-  broadcastToRoom(message.roomId, 'reaction:updated', {
+  broadcastToRoom(message.roomId, 'reaction:update', {
     messageId,
     roomId: message.roomId,
     reactions: updatedReactions,
@@ -391,15 +447,19 @@ export const getThreadReplies = async (rootMessageId: string) => {
               id: true,
               username: true,
               name: true,
+              avatar: true,
             },
           },
         },
       },
       attachments: true,
+      threadInfo: true,
     },
   });
 
-  if (!rootMessageRaw) throw new Error('Thread root message not found.');
+  if (!rootMessageRaw) {
+    throw new Error('Thread root message not found.');
+  }
 
   const rootMessage = {
     ...rootMessageRaw,
@@ -410,10 +470,17 @@ export const getThreadReplies = async (rootMessageId: string) => {
           avatarUrl: rootMessageRaw.sender.avatar,
         }
       : null,
-    reactions: rootMessageRaw.reactions.map((r) => ({
+    reactions: rootMessageRaw.reactions ? rootMessageRaw.reactions.map((r: any) => ({
       ...r,
-      user: r.user ? { ...r.user, displayName: r.user.name || r.user.username } : undefined,
-    })),
+      user: r.user
+        ? {
+            ...r.user,
+            displayName: r.user.name || r.user.username,
+            avatarUrl: r.user.avatar,
+          }
+        : null,
+    })) : [],
+    attachments: rootMessageRaw.attachments || [],
   };
 
   const repliesRaw = await prisma.message.findMany({
@@ -421,7 +488,9 @@ export const getThreadReplies = async (rootMessageId: string) => {
       parentMessageId: rootMessageId,
       isDeleted: false,
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: {
+      createdAt: 'asc',
+    },
     include: {
       sender: {
         select: {
@@ -440,6 +509,7 @@ export const getThreadReplies = async (rootMessageId: string) => {
               id: true,
               username: true,
               name: true,
+              avatar: true,
             },
           },
         },
@@ -448,7 +518,7 @@ export const getThreadReplies = async (rootMessageId: string) => {
     },
   });
 
-  const replies = repliesRaw.map((r) => ({
+  const replies = repliesRaw.map((r: any) => ({
     ...r,
     sender: r.sender
       ? {
@@ -457,10 +527,17 @@ export const getThreadReplies = async (rootMessageId: string) => {
           avatarUrl: r.sender.avatar,
         }
       : null,
-    reactions: r.reactions.map((rx) => ({
+    reactions: r.reactions ? r.reactions.map((rx: any) => ({
       ...rx,
-      user: rx.user ? { ...rx.user, displayName: rx.user.name || rx.user.username } : undefined,
-    })),
+      user: rx.user
+        ? {
+            ...rx.user,
+            displayName: rx.user.name || rx.user.username,
+            avatarUrl: rx.user.avatar,
+          }
+        : null,
+    })) : [],
+    attachments: r.attachments || [],
   }));
 
   return {
