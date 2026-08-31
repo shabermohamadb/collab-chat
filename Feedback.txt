@@ -1,0 +1,17 @@
+FEEDBACK & ROADMAP
+
+[x] Real-time multi-user chat room architecture
+[x] PostgreSQL database persistence with Prisma ORM
+[x] Shared room conversation AI context resolution (@AI)
+[x] Real-time typing indicators with multi-user typing aggregation
+[x] Live presence tracking (Online, Away, Offline)
+[x] Threaded replies and reply counts
+[x] Emoji reactions with real-time optimistic sync
+[x] Rich markdown & syntax highlighted code blocks with copy
+[x] File & media attachment uploading and previews
+[x] Responsive layout with mobile drawer and desktop multi-pane views
+[x] Role-based room management (Create, Invite, Remove, Rename, Archive, Delete)
+[ ] WebRTC voice/video huddle channels in rooms
+[ ] Push notifications via Web Push API
+[ ] End-to-end encrypted direct message channels
+[ ] Custom bot webhook integrations (GitHub, Jira, Linear)

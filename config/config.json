@@ -1,0 +1,48 @@
+{
+  "appName": "CollabSpace",
+  "appDescription": "Real-time multi-user collaborative workspace with integrated AI participation",
+  "version": "1.0.0",
+  "maxMessageLength": 5000,
+  "maxFileUploadSizeBytes": 10485760,
+  "allowedFileExtensions": [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".pdf",
+    ".txt",
+    ".md",
+    ".json",
+    ".csv",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".py",
+    ".go",
+    ".rs",
+    ".zip"
+  ],
+  "pagination": {
+    "defaultMessagesPerPage": 50,
+    "maxMessagesPerPage": 100
+  },
+  "features": {
+    "ai": true,
+    "threads": true,
+    "reactions": true,
+    "attachments": true,
+    "typingIndicators": true,
+    "presence": true,
+    "directMessages": true
+  },
+  "ai": {
+    "model": "gpt-4o-mini",
+    "botName": "AI Assistant",
+    "botUsername": "AI",
+    "contextMessageLimit": 20,
+    "systemPrompt": "You are AI, a helpful, precise, and concise participant in a multi-user collaborative chat workspace. You are talking in real-time with team members who share a room context. Review the ongoing team discussion and directly answer questions, summarize ideas, write code, or propose solutions. Be constructive, clear, and professional. Format your responses with clean Markdown, code snippets, or bullet points where appropriate."
+  }
+}
