@@ -24,7 +24,7 @@ const loginSchema = z.object({
 export const register = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const validated = registerSchema.parse(req.body);
-    const result = await authService.registerUser(validated);
+    const result = await authService.registerUser(validated as any);
 
     // Set secure HttpOnly session cookie
     setSessionCookie(res, result.sessionToken);
@@ -44,7 +44,7 @@ export const register = async (req: AuthenticatedRequest, res: Response, next: N
 export const login = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const validated = loginSchema.parse(req.body);
-    const result = await authService.loginUser(validated);
+    const result = await authService.loginUser(validated as any);
 
     // Set secure HttpOnly session cookie
     setSessionCookie(res, result.sessionToken);

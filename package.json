@@ -1,0 +1,26 @@
+{
+  "name": "collab-chat",
+  "version": "1.0.0",
+  "description": "Real-time multi-user collaborative chat platform with AI assistant and persistent JSON Database",
+  "scripts": {
+    "render-build": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
+    "build": "npm run render-build",
+    "start": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "chat",
+    "collaboration",
+    "realtime",
+    "socketio",
+    "react",
+    "typescript",
+    "gemini"
+  ],
+  "author": "Shaber",
+  "license": "MIT"
+}

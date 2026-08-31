@@ -18,7 +18,7 @@ const editMessageSchema = z.object({
 export const sendMessage = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const validated = createMessageSchema.parse(req.body);
-    const message = await messageService.createMessage(req.user!.id, validated);
+    const message = await messageService.createMessage(req.user!.id, validated as any);
     return sendSuccess(res, message, 'Message sent.', 201);
   } catch (error) {
     next(error);

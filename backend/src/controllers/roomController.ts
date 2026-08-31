@@ -20,7 +20,7 @@ const updateRoomSchema = z.object({
 export const create = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const validated = createRoomSchema.parse(req.body);
-    const room = await roomService.createRoom(req.user!.id, validated);
+    const room = await roomService.createRoom(req.user!.id, validated as any);
     return sendSuccess(res, room, 'Room created successfully.', 201);
   } catch (error) {
     next(error);

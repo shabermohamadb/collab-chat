@@ -313,6 +313,27 @@
       "userId": "aaf029c3-8564-4d43-a523-e4727930bd3f",
       "role": "MEMBER",
       "joinedAt": "2026-08-31T13:20:21.240Z"
+    },
+    {
+      "id": "m-room-ai--aaf029c3",
+      "roomId": "room-ai-lab-002",
+      "userId": "aaf029c3-8564-4d43-a523-e4727930bd3f",
+      "role": "MEMBER",
+      "joinedAt": "2026-08-31T13:24:50.959Z"
+    },
+    {
+      "id": "m-room-web-aaf029c3",
+      "roomId": "room-website-project-003",
+      "userId": "aaf029c3-8564-4d43-a523-e4727930bd3f",
+      "role": "MEMBER",
+      "joinedAt": "2026-08-31T13:24:50.959Z"
+    },
+    {
+      "id": "m-room-eng-aaf029c3",
+      "roomId": "room-engineering-004",
+      "userId": "aaf029c3-8564-4d43-a523-e4727930bd3f",
+      "role": "MEMBER",
+      "joinedAt": "2026-08-31T13:24:50.959Z"
     }
   ],
   "messages": [
